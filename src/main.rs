@@ -3,7 +3,7 @@ mod fs_ops;
 mod metadata;
 mod model;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use clap::Parser;
 use log::{error, info};
 use std::io::Write;
@@ -27,14 +27,7 @@ struct Args {
 
 fn main() -> Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
-        .format(|buf, record| {
-            writeln!(
-                buf,
-                "[{}] {}",
-                record.level(),
-                record.args()
-            )
-        })
+        .format(|buf, record| writeln!(buf, "[{}] {}", record.level(), record.args()))
         .init();
 
     let args = Args::parse();
@@ -72,7 +65,7 @@ fn main() -> Result<()> {
                 } else {
                     skipped_count += 1;
                 }
-            },
+            }
             Err(e) => {
                 error!("Failed to process {:?}: {}", path, e);
                 error_count += 1;
@@ -80,6 +73,9 @@ fn main() -> Result<()> {
         }
     }
 
-    info!("Done! Processed: {}, Skipped: {}, Errors: {}", success_count, skipped_count, error_count);
+    info!(
+        "Done! Processed: {}, Skipped: {}, Errors: {}",
+        success_count, skipped_count, error_count
+    );
     Ok(())
 }

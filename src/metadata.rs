@@ -32,8 +32,10 @@ impl DateExtractor {
         let path_with_json_ext = input_path.with_extension("json");
 
         // Extract Date from metadata json
-        if let Some(date) = self.parse_json_date(&path_with_extra_json_ext)
-            .or_else(|| self.parse_json_date(&path_with_json_ext)) {
+        if let Some(date) = self
+            .parse_json_date(&path_with_extra_json_ext)
+            .or_else(|| self.parse_json_date(&path_with_json_ext))
+        {
             return Some(date);
         }
 
@@ -80,7 +82,8 @@ impl DateExtractor {
 
         let exif = exif_reader.read_from_container(&mut bufreader).ok()?;
 
-        let date_tag = exif.get_field(exif::Tag::DateTimeOriginal, exif::In::PRIMARY)
+        let date_tag = exif
+            .get_field(exif::Tag::DateTimeOriginal, exif::In::PRIMARY)
             .or_else(|| exif.get_field(exif::Tag::DateTimeDigitized, exif::In::PRIMARY))
             .or_else(|| exif.get_field(exif::Tag::DateTime, exif::In::PRIMARY));
 
@@ -88,11 +91,13 @@ impl DateExtractor {
             let date_value = field.display_value().with_unit(&exif).to_string();
             let clean_date_value = date_value.trim();
 
-            if let Ok(naive) = NaiveDateTime::parse_from_str(clean_date_value, "%Y:%m:%d %H:%M:%S") {
+            if let Ok(naive) = NaiveDateTime::parse_from_str(clean_date_value, "%Y:%m:%d %H:%M:%S")
+            {
                 return Some(DateTime::from_naive_utc_and_offset(naive, Utc));
             }
 
-            if let Ok(naive) = NaiveDateTime::parse_from_str(clean_date_value, "%Y-%m-%d %H:%M:%S") {
+            if let Ok(naive) = NaiveDateTime::parse_from_str(clean_date_value, "%Y-%m-%d %H:%M:%S")
+            {
                 return Some(DateTime::from_naive_utc_and_offset(naive, Utc));
             }
         }
@@ -119,13 +124,56 @@ impl DateExtractor {
             let m = caps.get(2)?.as_str().parse::<u32>().ok()?;
             let y = caps.get(3)?.as_str().parse::<i32>().ok()?;
 
-            if y > 1990 && y < 2030 {
-                if let Some(dt) = naive_to_utc(y, m, d) {
-                    return Some(dt);
-                }
+            if y > 1990
+                && y < 2030
+                && let Some(dt) = naive_to_utc(y, m, d)
+            {
+                return Some(dt);
             }
         }
 
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Datelike;
+
+    #[test]
+    fn test_filename_date_extraction_std() {
+        let extractor = DateExtractor::new().unwrap();
+
+        let path = Path::new("IMG_20230520_120000.jpg");
+        let date = extractor.parse_filename_date(path).unwrap();
+        assert_eq!(date.year(), 2023);
+        assert_eq!(date.month(), 5);
+        assert_eq!(date.day(), 20);
+
+        let path = Path::new("2022-12-01.jpg");
+        let date = extractor.parse_filename_date(path).unwrap();
+        assert_eq!(date.year(), 2022);
+        assert_eq!(date.month(), 12);
+        assert_eq!(date.day(), 1);
+    }
+
+    #[test]
+    fn test_filename_date_extraction_dmy() {
+        let extractor = DateExtractor::new().unwrap();
+
+        // WhatsApp style sometimes uses this or similar
+        let path = Path::new("IMG-25102023-WA0001.jpg");
+        let date = extractor.parse_filename_date(path).unwrap();
+        assert_eq!(date.year(), 2023);
+        assert_eq!(date.month(), 10);
+        assert_eq!(date.day(), 25);
+    }
+
+    #[test]
+    fn test_filename_no_date() {
+        let extractor = DateExtractor::new().unwrap();
+        let path = Path::new("random_image.jpg");
+        assert!(extractor.parse_filename_date(path).is_none());
     }
 }
