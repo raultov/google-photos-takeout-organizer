@@ -1,0 +1,8 @@
+/target
+**/*.rs.bk
+.idea/
+*.iml
+
+# Ignore test data folders
+Takeout/
+my_pictures/
