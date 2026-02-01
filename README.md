@@ -44,10 +44,10 @@ cargo run --release -- -i /path/to/takeout -o /path/to/organized_photos
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--input` | `-i` | Path to the source directory (Google Takeout) | **Required** |
-| `--output` | `-o` | Path to the destination directory | **Required** |
-| `--unknown-dir` | | Name of the folder for files with no date | `unknown` |
-| `--help` | `-h` | Show help message | |
+| `--input` | `-i`  | Path to the source directory (Google Takeout) | **Required** |
+| `--output` | `-o`  | Path to the destination directory | **Required** |
+| `--unknown-dir` | `-u`  | Name of the folder for files with no date | `unknown` |
+| `--help` | `-h`  | Show help message | |
 
 ### Examples
 
