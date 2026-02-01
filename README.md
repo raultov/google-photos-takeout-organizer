@@ -30,7 +30,7 @@ cd google-photos-takeout-organizer
 cargo build --release
 ```
 
-The binary will be available at `target/release/google-photos-takeout-organizer`.
+The binary will be available at `target/release/google-photos-takeout-cli`.
 
 ## 📖 Usage
 
@@ -53,12 +53,12 @@ cargo run --release -- -i /path/to/takeout -o /path/to/organized_photos
 
 **Basic run:**
 ```bash
-./google-photos-takeout-organizer -i ./Takeout -o ./MyPhotos
+./google-photos-takeout-cli -i ./Takeout -o ./MyPhotos
 ```
 
 **Custom "unknown" folder:**
 ```bash
-./google-photos-takeout-organizer -i ./Takeout -o ./MyPhotos --unknown-dir "unsorted"
+./google-photos-takeout-cli -i ./Takeout -o ./MyPhotos --unknown-dir "unsorted"
 ```
 
 **Enable Debug Logging:**
@@ -66,11 +66,11 @@ To see detailed logs about what the tool is doing (e.g., which date source was u
 
 *   **Linux/macOS:**
     ```bash
-    RUST_LOG=debug ./google-photos-takeout-organizer -i ...
+    RUST_LOG=debug ./google-photos-takeout-cli -i ...
     ```
 *   **Windows (PowerShell):**
     ```powershell
-    $env:RUST_LOG="debug"; ./google-photos-takeout-organizer.exe -i ...
+    $env:RUST_LOG="debug"; ./google-photos-takeout-cli.exe -i ...
     ```
 
 ## 🌍 Cross-Compilation (e.g., Raspberry Pi)

@@ -1,5 +1,5 @@
 [package]
-name = "google-photos-takeout-organizer"
+name = "google-photos-takeout-cli"
 version = "0.1.0"
 edition = "2024"
 authors = ["Raul Tovar <raultov@protonmail.com>"]
