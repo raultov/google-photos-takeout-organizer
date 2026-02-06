@@ -2,6 +2,7 @@
 **/*.rs.bk
 .idea/
 *.iml
+.github/
 
 # Ignore test data folders
 Takeout/
