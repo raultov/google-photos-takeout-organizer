@@ -38,6 +38,9 @@ serde_json = "1.0.149"
 # Filesystem traversal
 walkdir = "2.5.0"
 
+# Progress bar
+indicatif = "0.18.3"
+
 # The profile that 'dist' will build with
 [profile.dist]
 inherits = "release"

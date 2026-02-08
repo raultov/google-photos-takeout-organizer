@@ -2,11 +2,11 @@ mod date_utils;
 mod fs_ops;
 mod metadata;
 mod model;
+mod ui;
 
 use anyhow::{Result, bail};
 use clap::Parser;
 use log::{error, info};
-use std::io::Write;
 use std::path::Path;
 use walkdir::WalkDir;
 
@@ -26,9 +26,7 @@ struct Args {
 }
 
 fn main() -> Result<()> {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
-        .format(|buf, record| writeln!(buf, "[{}] {}", record.level(), record.args()))
-        .init();
+    ui::init_logger();
 
     let args = Args::parse();
     let input_path = Path::new(&args.input);
@@ -43,12 +41,17 @@ fn main() -> Result<()> {
     info!("Dest:   {:?}", output_path);
     info!("Dir for unknown files: {:?}", args.unknown_dir);
 
+    // First pass: Count files to initialize progress bar
+    let total_files = get_total_files(input_path);
+    info!("Found {} files to process", total_files);
+
+    let progress_bar = ui::create_progress_bar(total_files);
+
     let date_extractor = DateExtractor::new()?;
     let mut success_count = 0;
     let mut error_count = 0;
     let mut skipped_count = 0;
 
-    // TODO add progress indicator
     for entry in WalkDir::new(input_path).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
 
@@ -71,11 +74,22 @@ fn main() -> Result<()> {
                 error_count += 1;
             }
         }
+        progress_bar.inc(1);
     }
+
+    progress_bar.finish_with_message("Done");
 
     info!(
         "Done! Processed: {}, Skipped: {}, Errors: {}",
         success_count, skipped_count, error_count
     );
     Ok(())
+}
+
+fn get_total_files(input_path: &Path) -> u64 {
+    WalkDir::new(input_path)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| fs_ops::should_process_file(e.path()))
+        .count() as u64
 }
