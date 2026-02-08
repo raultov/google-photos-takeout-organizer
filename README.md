@@ -13,6 +13,7 @@ A high-performance Rust tool to organize your Google Photos Takeout archive into
     3.  **Filename Parsing**: Tries to extract dates from filenames (e.g., `IMG_20220101_120000.jpg`).
 * **Chronological Organization**: Sorts files into a `YYYY/MM/DD` folder structure.
 * **Smart Updates**: If you run the tool again, it only copies files that are new or have changed (based on file size), skipping duplicates to save time.
+* **Progress Bar**: Shows a real-time progress bar with ETA and file count.
 * **"Unknown" Handling**: Files with no detectable date are moved to a separate `unknown` folder (customizable).
 * **Fast & Efficient**: Built with Rust for maximum performance and low memory usage.
 
