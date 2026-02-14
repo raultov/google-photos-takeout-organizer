@@ -65,8 +65,8 @@ pub fn create_progress_bar(total_files: u64) -> ProgressBar {
 
 #[cfg(test)]
 mod tests {
-    use log::Log;
     use super::*;
+    use log::Log;
 
     #[test]
     fn test_create_progress_bar() {

@@ -12,7 +12,12 @@ A high-performance Rust tool to organize your Google Photos Takeout archive into
     2.  **EXIF Data**: Inspects the file's internal EXIF metadata.
     3.  **Filename Parsing**: Tries to extract dates from filenames (e.g., `IMG_20220101_120000.jpg`).
 * **Chronological Organization**: Sorts files into a `YYYY/MM/DD` folder structure.
+* **HTML Gallery Generator**: Automatically generates a beautiful, navigable HTML gallery of your organized photos.
+    *   **Interactive Modal**: Click photos to view them in a large overlay with navigation controls.
+    *   **Slideshow Mode**: Play a slideshow of your photos (5-second interval) with date display.
+    *   **Flattened View**: Toggle between viewing a month by days or seeing all photos for that month in a single grid.
 * **Smart Updates**: If you run the tool again, it only copies files that are new or have changed (based on file size), skipping duplicates to save time.
+* **New Files Report**: When running incrementally, provides a console report listing exactly which new files were added.
 * **Progress Bar**: Shows a real-time progress bar with ETA and file count.
 * **"Unknown" Handling**: Files with no detectable date are moved to a separate `unknown` folder (customizable).
 * **Fast & Efficient**: Built with Rust for maximum performance and low memory usage.
@@ -59,22 +64,25 @@ If you installed via the Quick Install script, you can simply run:
 google-photos-takeout-organizer -i /path/to/takeout -o /path/to/organized_photos
 ```
 
-### Running from Source
+The tool will organize your photos and generate an HTML gallery (`collection.html` in the output folder).
 
-Basic usage requires specifying the input directory (your Google Takeout folder) and the output directory (where you want the organized photos).
+### Regenerating HTML Gallery
+
+If you already have an organized folder and just want to regenerate the HTML gallery (e.g., after an update to the tool), you can omit the input directory:
 
 ```bash
-cargo run --release -- -i /path/to/takeout -o /path/to/organized_photos
+google-photos-takeout-organizer -o /path/to/organized_photos
 ```
 
 ### Options
 
-| Option | Short | Description | Default |
-|---|---|---|---|
-| `--input` | `-i` | Path to the source directory (Google Takeout) | **Required** |
-| `--output` | `-o` | Path to the destination directory | **Required** |
-| `--unknown-dir` | `-u` | Name of the folder for files with no date | `unknown` |
-| `--help` | `-h` | Show help message | |
+| Option | Short  | Description | Default |
+|---|--------|---|---|
+| `--input` | `-i`   | Path to the source directory (Google Takeout). Optional if regenerating HTML. | |
+| `--output` | `-o`   | Path to the destination directory | **Required** |
+| `--unknown-dir` | `-u`   | Name of the folder for files with no date | `unknown` |
+| `--generate-html` | `-g`  | Generate HTML gallery (set to `false` to disable) | `true` |
+| `--help` | `-h`   | Show help message | |
 
 ### Examples
 
@@ -92,6 +100,12 @@ cargo run --release -- -i ./Takeout -o ./MyPhotos
 
 ```bash
 google-photos-takeout-organizer -i ./Takeout -o ./MyPhotos --unknown-dir "unsorted"
+```
+
+**Disable HTML generation:**
+
+```bash
+google-photos-takeout-organizer -i ./Takeout -o ./MyPhotos --generate-html false
 ```
 
 ### Enable Debug Logging

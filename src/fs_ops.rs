@@ -4,6 +4,13 @@ use log::{debug, info, warn};
 use std::fs;
 use std::path::Path;
 
+#[derive(Debug, PartialEq)]
+pub enum FileAction {
+    New,
+    Updated,
+    Skipped,
+}
+
 pub fn should_process_file(path: &Path) -> bool {
     if path.is_dir() {
         return false;
@@ -27,7 +34,7 @@ pub fn process_file(
     output_path: &Path,
     date: Option<DateTime<Utc>>,
     unknown_dir: &str,
-) -> Result<bool> {
+) -> Result<FileAction> {
     let dest_folder = match date {
         Some(date) => output_path.join(format!(
             "{}/{:02}/{:02}",
@@ -58,13 +65,13 @@ pub fn process_file(
                 fs::copy(input_path, &dest_path).with_context(|| {
                     format!("Failed to copy file {:?} to {:?}", input_path, dest_path)
                 })?;
-                Ok(true)
+                Ok(FileAction::Updated)
             } else {
                 debug!(
                     "Skipping file (already exists and same size): {:?}",
                     filename
                 );
-                Ok(false)
+                Ok(FileAction::Skipped)
             }
         } else {
             fs::copy(input_path, &dest_path).with_context(|| {
@@ -75,11 +82,11 @@ pub fn process_file(
                 input_path.file_name().unwrap(),
                 dest_folder
             );
-            Ok(true)
+            Ok(FileAction::New)
         };
     }
 
-    Ok(false)
+    Ok(FileAction::Skipped)
 }
 
 #[cfg(test)]
