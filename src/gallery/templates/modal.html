@@ -1,0 +1,15 @@
+<div id="modal" class="modal" onclick="closeModal(event)">
+    <span class="close" onclick="closeModal(event)">&times;</span>
+    <img id="modal-img" class="modal-content" src="" alt="Full size photo">
+    <video id="modal-video" controls>
+        <source id="modal-video-src" src="" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    <div id="modal-date" class="modal-caption"></div>
+    
+    <div class="modal-controls" onclick="event.stopPropagation()">
+        <button id="prev-btn" class="modal-btn" onclick="changeSlide(-1)">&#10094; Previous</button>
+        <button id="slideshow-btn" class="modal-btn" onclick="toggleSlideshow()">Start Slideshow</button>
+        <button id="next-btn" class="modal-btn" onclick="changeSlide(1)">Next &#10095;</button>
+    </div>
+</div>

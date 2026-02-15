@@ -1,6 +1,6 @@
 [package]
 name = "google-photos-takeout-organizer"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 authors = ["Raul Tovar <raultov@protonmail.com>"]
 description = "A high-performance tool to organize Google Photos Takeout archives into a chronological folder structure."

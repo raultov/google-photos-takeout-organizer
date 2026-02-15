@@ -1,4 +1,4 @@
-        body { font-family: sans-serif; margin: 20px; background: #f0f0f0; position: relative; }
+body { font-family: sans-serif; margin: 20px; background: #f0f0f0; position: relative; }
         h1 { color: #333; }
         .breadcrumb { margin-bottom: 20px; }
         .breadcrumb a { text-decoration: none; color: #0066cc; margin-right: 5px; }
@@ -8,9 +8,21 @@
         .directory:hover { background-color: #f9f9f9; }
         .directory a { display: block; padding: 10px; text-decoration: none; color: #333; font-weight: bold; }
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-        .photo { display: flex; flex-direction: column; background: white; padding: 5px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; height: 100%; box-sizing: border-box; }
+        .photo { display: flex; flex-direction: column; background: white; padding: 5px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; height: 100%; box-sizing: border-box; position: relative; }
+        .photo a { position: relative; display: block; }
         .photo img { width: 100%; height: 200px; object-fit: cover; display: block; border-radius: 2px; cursor: pointer; }
         .photo .date { margin-top: 5px; font-size: 0.8em; color: #666; }
+        .play-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.9);
+            pointer-events: none;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            line-height: 1;
+        }
         .toggle-btn {
             position: absolute;
             top: 20px;
@@ -43,6 +55,14 @@
         .modal-content {
             margin: auto;
             display: block;
+            max-width: 90%;
+            max-height: 80vh;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        #modal-video {
+            margin: auto;
+            display: none;
             max-width: 90%;
             max-height: 80vh;
             border-radius: 5px;

@@ -6,8 +6,8 @@ use std::fs;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
-use crate::date_utils::{naive_to_utc, timestamp_string_to_date};
-use crate::model::PhotoMetadata;
+use crate::organizer::date_utils::{naive_to_utc, timestamp_string_to_date};
+use crate::organizer::model::PhotoMetadata;
 
 pub struct DateExtractor {
     regex_std: Regex,

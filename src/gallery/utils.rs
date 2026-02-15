@@ -13,6 +13,16 @@ pub fn is_image(path: &Path) -> bool {
     )
 }
 
+pub fn is_video(path: &Path) -> bool {
+    let ext = path
+        .extension()
+        .and_then(|s| s.to_str())
+        .map(|s| s.to_lowercase())
+        .unwrap_or_default();
+
+    matches!(ext.as_str(), "mp4" | "mov" | "avi" | "mkv" | "webm" | "m4v")
+}
+
 pub fn get_date_from_path(image_path: &Path, root_path: &Path) -> Option<String> {
     let relative = image_path.strip_prefix(root_path).ok()?;
     let components: Vec<_> = relative.components().collect();

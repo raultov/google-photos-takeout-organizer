@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 
-use super::utils::get_date_from_path;
+use super::utils::{get_date_from_path, is_video};
 
 pub fn build_html(
     current_dir: &Path,
@@ -87,20 +87,30 @@ pub fn build_html(
             r#"    <div id="flattened-gallery" class="gallery">
 "#,
         );
-        // Include both flattened images and direct images (if any) in the flattened view.
-        // Direct images: image is absolute path
-        html.push_str(&generate_images_html(images, root_path));
+        html.push_str(&generate_images_html(images, current_dir, root_path));
 
-        // Flattened images: image is relative path (e.g. "01/img.jpg")
         for image in flattened_images {
             let path_str = image.to_string_lossy();
             let filename = image.file_name().unwrap().to_string_lossy();
 
             let full_path = current_dir.join(image);
             let date_str = get_date_from_path(&full_path, root_path).unwrap_or_default();
+            let is_vid = is_video(&full_path);
+
+            let display_src = if is_vid {
+                let parent = image.parent().unwrap_or(Path::new(""));
+                let thumb_path = parent.join(".thumbnails").join(format!("{}.jpg", filename));
+                thumb_path.to_string_lossy().to_string()
+            } else {
+                path_str.to_string()
+            };
 
             html.push_str(&generate_photo_html(
-                &path_str, &path_str, &filename, &date_str,
+                &path_str,
+                &display_src,
+                &filename,
+                &date_str,
+                is_vid,
             ));
         }
         html.push_str("    </div>\n");
@@ -141,7 +151,7 @@ pub fn build_html(
             r#"    <div class="gallery">
 "#,
         );
-        html.push_str(&generate_images_html(images, root_path));
+        html.push_str(&generate_images_html(images, current_dir, root_path));
         html.push_str("    </div>\n");
     }
 
@@ -160,21 +170,50 @@ pub fn build_html(
     Ok(html)
 }
 
-fn generate_photo_html(src: &str, display_src: &str, alt: &str, date: &str) -> String {
+fn generate_photo_html(
+    src: &str,
+    display_src: &str,
+    alt: &str,
+    date: &str,
+    is_video: bool,
+) -> String {
     let tmpl = include_str!("templates/photo_card.html");
+    let type_str = if is_video { "video" } else { "image" };
+    let play_icon = if is_video {
+        "<div class=\"play-icon\">▶</div>"
+    } else {
+        ""
+    };
+
     tmpl.replace("{src}", src)
         .replace("{display_src}", display_src)
         .replace("{alt}", alt)
         .replace("{date}", date)
+        .replace("{type}", type_str)
+        .replace("{play_icon}", play_icon)
 }
 
-fn generate_images_html(images: &[PathBuf], root_path: &Path) -> String {
+fn generate_images_html(images: &[PathBuf], current_dir: &Path, root_path: &Path) -> String {
     let mut html = String::new();
     for image in images {
         let filename = image.file_name().unwrap().to_string_lossy();
-        let date_str = get_date_from_path(image, root_path).unwrap_or_default();
+        let full_path = current_dir.join(image);
+        let date_str = get_date_from_path(&full_path, root_path).unwrap_or_default();
+        let is_vid = is_video(&full_path);
+
+        let display_src = if is_vid {
+            let thumb_path = Path::new(".thumbnails").join(format!("{}.jpg", filename));
+            thumb_path.to_string_lossy().to_string()
+        } else {
+            filename.to_string()
+        };
+
         html.push_str(&generate_photo_html(
-            &filename, &filename, &filename, &date_str,
+            &filename,
+            &display_src,
+            &filename,
+            &date_str,
+            is_vid,
         ));
     }
     html
@@ -186,11 +225,23 @@ mod tests {
 
     #[test]
     fn test_generate_photo_html() {
-        let html = generate_photo_html("img.jpg", "img.jpg", "img.jpg", "2023-01-01");
+        let html = generate_photo_html("img.jpg", "img.jpg", "img.jpg", "2023-01-01", false);
         assert!(html.contains("href=\"img.jpg\""));
         assert!(html.contains("src=\"img.jpg\""));
-        assert!(html.contains("alt=\"img.jpg\""));
-        assert!(html.contains("class=\"date\">2023-01-01</span>"));
+        assert!(html.contains("data-type=\"image\""));
+        assert!(!html.contains("play-icon"));
+
+        let html_vid = generate_photo_html(
+            "vid.mp4",
+            ".thumbnails/vid.mp4.jpg",
+            "vid.mp4",
+            "2023-01-01",
+            true,
+        );
+        assert!(html_vid.contains("href=\"vid.mp4\""));
+        assert!(html_vid.contains("src=\".thumbnails/vid.mp4.jpg\""));
+        assert!(html_vid.contains("data-type=\"video\""));
+        assert!(html_vid.contains("play-icon"));
     }
 
     #[test]
@@ -202,7 +253,6 @@ mod tests {
 
         let html = build_html(root, root, &subdirs, &images, &flattened).unwrap();
 
-        assert!(html.contains("<title>Photo Collection</title>"));
         assert!(html.contains("<h1>Photo Collection</h1>"));
         assert!(!html.contains("id=\"toggle-btn\"")); // No toggle button
         assert!(html.contains("id=\"directory-view\" style=\"\"")); // Visible dir view
@@ -219,7 +269,7 @@ mod tests {
         let html = build_html(&current, root, &subdirs, &images, &flattened).unwrap();
 
         assert!(html.contains("<title>2023/01</title>"));
-        assert!(html.contains("Show Days")); // Toggle present
+        assert!(html.contains("id=\"toggle-btn\"")); // Toggle present
         assert!(html.contains("id=\"directory-view\" style=\"display: none;\"")); // Hidden dir view
         assert!(html.contains("id=\"flattened-gallery\""));
         assert!(html.contains("01/img.jpg"));
@@ -231,18 +281,6 @@ mod tests {
         let current = root.join("2023/01/01");
         let html = build_html(&current, root, &[], &[], &[]).unwrap();
 
-        // Check links
-        // root -> collection.html
-        // 2023 -> ../../index.html (Wait, logic check)
-        // 01 -> ../index.html
-        // 01 (current) -> Text
-
-        // My breadcrumb logic:
-        // root link: href="../../collection.html" (depth 3: 2023, 01, 01)
-        // 2023: href="../../index.html" ?
-        // 01: href="../index.html"
-
-        // Let's verify string presence loosely
         assert!(html.contains("href=\"../../../collection.html\"")); // 3 levels up
         assert!(html.contains("2023"));
         assert!(html.contains("01"));

@@ -48,7 +48,7 @@ pub fn create_progress_bar(total_files: u64) -> ProgressBar {
     progress_bar.set_style(
         ProgressStyle::default_bar()
             .template(
-                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
+                "{msg} {spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
             )
             .expect("Invalid progress bar template")
             .progress_chars("#>-"),

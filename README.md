@@ -12,15 +12,25 @@ A high-performance Rust tool to organize your Google Photos Takeout archive into
     2.  **EXIF Data**: Inspects the file's internal EXIF metadata.
     3.  **Filename Parsing**: Tries to extract dates from filenames (e.g., `IMG_20220101_120000.jpg`).
 * **Chronological Organization**: Sorts files into a `YYYY/MM/DD` folder structure.
-* **HTML Gallery Generator**: Automatically generates a beautiful, navigable HTML gallery of your organized photos.
-    *   **Interactive Modal**: Click photos to view them in a large overlay with navigation controls.
-    *   **Slideshow Mode**: Play a slideshow of your photos (5-second interval) with date display.
-    *   **Flattened View**: Toggle between viewing a month by days or seeing all photos for that month in a single grid.
+* **HTML Gallery Generator**: Automatically generates a beautiful, navigable HTML gallery of your organized photos and videos.
+    *   **Interactive Modal**: Click photos or videos to view them in a large overlay. Videos can be played directly in the modal.
+    *   **Video Thumbnails**: Automatically generates preview thumbnails for videos (requires FFmpeg).
+    *   **Slideshow Mode**: Play a slideshow of your media (5-second interval) with date display.
+    *   **Flattened View**: Toggle between viewing a month by days or seeing all media for that month in a single grid.
 * **Smart Updates**: If you run the tool again, it only copies files that are new or have changed (based on file size), skipping duplicates to save time.
 * **New Files Report**: When running incrementally, provides a console report listing exactly which new files were added.
-* **Progress Bar**: Shows a real-time progress bar with ETA and file count.
+* **Progress Bar**: Shows real-time progress bars for both organization and gallery generation phases, with consistent ETA and status messages.
 * **"Unknown" Handling**: Files with no detectable date are moved to a separate `unknown` folder (customizable).
 * **Fast & Efficient**: Built with Rust for maximum performance and low memory usage.
+
+## 📋 Requirements
+
+* **FFmpeg (Optional but recommended)**: Required for generating video thumbnails in the HTML gallery. 
+    * **Linux**: Install via your package manager (e.g., `sudo apt install ffmpeg`).
+    * **macOS**: Install via Homebrew (`brew install ffmpeg`).
+    * **Windows**: Install via [Chocolatey](https://chocolatey.org/) (`choco install ffmpeg`), [Scoop](https://scoop.sh/) (`scoop install ffmpeg`), or download the binaries from [ffmpeg.org](https://ffmpeg.org/download.html). **Important**: Ensure `ffmpeg.exe` is in a folder included in your system's **PATH** environment variable.
+
+If FFmpeg is not installed, videos will still be included in the gallery but without preview thumbnails (only a play icon will be shown).
 
 ## 🛠️ Installation
 
