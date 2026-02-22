@@ -36,6 +36,67 @@ pub fn get_video_duration(video_path: &Path) -> Result<f64> {
     stdout.trim().parse::<f64>().context("Invalid duration")
 }
 
+pub fn get_video_codec(video_path: &Path) -> Result<String> {
+    let output = Command::new("ffprobe")
+        .arg("-v")
+        .arg("error")
+        .arg("-select_streams")
+        .arg("v:0")
+        .arg("-show_entries")
+        .arg("stream=codec_name")
+        .arg("-of")
+        .arg("default=noprint_wrappers=1:nokey=1")
+        .arg(video_path)
+        .output()
+        .context("Failed to run ffprobe to check codec")?;
+
+    if !output.status.success() {
+        return Ok("unknown".to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(stdout.trim().to_string())
+}
+
+pub fn transcode_video_to_h264(input_path: &Path, output_path: &Path) -> Result<()> {
+    // Create parent directory if it doesn't exist
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    // ffmpeg -threads 1 -i input.mp4 -c:v libx264 -crf 23 -preset fast -c:a aac -b:a 128k output.mp4
+    let output = Command::new("ffmpeg")
+        .arg("-threads")
+        .arg("1")
+        .arg("-i")
+        .arg(input_path)
+        .arg("-c:v")
+        .arg("libx264")
+        .arg("-crf")
+        .arg("23") // Good quality/size balance
+        .arg("-preset")
+        .arg("fast") // Faster encoding
+        .arg("-c:a")
+        .arg("aac")
+        .arg("-b:a")
+        .arg("128k")
+        .arg("-y") // Overwrite
+        .arg(output_path)
+        .output()
+        .context("Failed to run ffmpeg for transcoding")?;
+
+    if !output.status.success() {
+        warn!(
+            "ffmpeg transcoding failed for {:?}: {}",
+            input_path,
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return Err(anyhow::anyhow!("Transcoding failed"));
+    }
+
+    Ok(())
+}
+
 pub fn generate_thumbnail(video_path: &Path, thumb_path: &Path, time_pos: f64) -> Result<()> {
     // Generate thumbnail at specific time
     // ffmpeg -ss <time> -i <input> -vframes 1 -q:v 2 <output>
@@ -46,6 +107,8 @@ pub fn generate_thumbnail(video_path: &Path, thumb_path: &Path, time_pos: f64) -
     }
 
     let output = Command::new("ffmpeg")
+        .arg("-threads")
+        .arg("1")
         .arg("-ss")
         .arg(format!("{:.3}", time_pos))
         .arg("-i")
@@ -66,6 +129,21 @@ pub fn generate_thumbnail(video_path: &Path, thumb_path: &Path, time_pos: f64) -
             String::from_utf8_lossy(&output.stderr)
         );
     }
+
+    Ok(())
+}
+
+pub fn generate_image_thumbnail(image_path: &Path, thumb_path: &Path) -> Result<()> {
+    // Create parent directory if it doesn't exist
+    if let Some(parent) = thumb_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let img = image::open(image_path).context("Failed to open image")?;
+    let thumbnail = img.thumbnail(400, 400);
+    thumbnail
+        .save(thumb_path)
+        .context("Failed to save thumbnail")?;
 
     Ok(())
 }

@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Datelike, Utc};
 use log::{debug, info, warn};
 use std::fs;
+use std::io;
 use std::path::Path;
 
 #[derive(Debug, PartialEq)]
@@ -29,6 +30,50 @@ pub fn should_process_file(path: &Path) -> bool {
     true
 }
 
+pub fn is_archive(path: &Path) -> bool {
+    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    filename.ends_with(".zip") || filename.ends_with(".tar.gz") || filename.ends_with(".tgz")
+}
+
+pub fn extract_archive(archive_path: &Path, extract_to: &Path) -> Result<()> {
+    let filename = archive_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("");
+
+    if filename.ends_with(".zip") {
+        info!("Extracting ZIP archive: {:?}", archive_path);
+        let file = fs::File::open(archive_path)?;
+        let mut archive = zip::ZipArchive::new(file)?;
+
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i)?;
+            let outpath = match file.enclosed_name() {
+                Some(path) => extract_to.join(path),
+                None => continue,
+            };
+
+            if (*file.name()).ends_with('/') {
+                fs::create_dir_all(&outpath)?;
+            } else {
+                if let Some(p) = outpath.parent() && !p.exists() {
+                    fs::create_dir_all(p)?;
+                }
+                let mut outfile = fs::File::create(&outpath)?;
+                io::copy(&mut file, &mut outfile)?;
+            }
+        }
+    } else if filename.ends_with(".tar.gz") || filename.ends_with(".tgz") {
+        info!("Extracting TAR.GZ archive: {:?}", archive_path);
+        let tar_gz = fs::File::open(archive_path)?;
+        let tar = flate2::read::GzDecoder::new(tar_gz);
+        let mut archive = tar::Archive::new(tar);
+        archive.unpack(extract_to)?;
+    }
+
+    Ok(())
+}
+
 pub fn process_file(
     input_path: &Path,
     output_path: &Path,
@@ -36,12 +81,24 @@ pub fn process_file(
     unknown_dir: &str,
 ) -> Result<FileAction> {
     let dest_folder = match date {
-        Some(date) => output_path.join(format!(
-            "{}/{:02}/{:02}",
-            date.year(),
-            date.month(),
-            date.day()
-        )),
+        Some(date) => {
+            let month_name = match date.month() {
+                1 => "January",
+                2 => "February",
+                3 => "March",
+                4 => "April",
+                5 => "May",
+                6 => "June",
+                7 => "July",
+                8 => "August",
+                9 => "September",
+                10 => "October",
+                11 => "November",
+                12 => "December",
+                _ => "Unknown",
+            };
+            output_path.join(format!("{}/{}/{:02}", date.year(), month_name, date.day()))
+        }
         None => {
             warn!(
                 "Date unknown for file: {:?}",

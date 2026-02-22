@@ -3,9 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{title}</title>
+    <title>{title} - Photo Organizer</title>
     <style>
 {styles}
     </style>
 </head>
 <body>
+    <header>
+        <div style="display:flex; align-items:center;">
+            <div style="background:var(--primary-color); color:white; width:32px; height:32px; border-radius:4px; display:flex; align-items:center; justify-content:center; margin-right:12px; font-weight:bold;">P</div>
+            <h1>{title}</h1>
+        </div>
+        {toggle_btn}
+    </header>

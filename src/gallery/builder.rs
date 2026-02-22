@@ -24,19 +24,22 @@ pub fn build_html(
     // Header
     let header_tmpl = include_str!("templates/header.html");
     let css = include_str!("templates/styles.css");
+
+    let toggle_btn = if has_flattened {
+        include_str!("templates/toggle_btn.html")
+    } else {
+        ""
+    };
+
     html.push_str(
         &header_tmpl
             .replace("{title}", &title)
-            .replace("{styles}", css),
+            .replace("{styles}", css)
+            .replace("{toggle_btn}", toggle_btn),
     );
 
-    // Toggle Button
-    if has_flattened {
-        html.push_str(include_str!("templates/toggle_btn.html"));
-        html.push('\n');
-    }
-
     // Breadcrumb
+    html.push_str("    <div class=\"main-content\">\n");
     html.push_str("    <div class=\"breadcrumb\">\n");
 
     // Link to root
@@ -97,16 +100,32 @@ pub fn build_html(
             let date_str = get_date_from_path(&full_path, root_path).unwrap_or_default();
             let is_vid = is_video(&full_path);
 
-            let display_src = if is_vid {
-                let parent = image.parent().unwrap_or(Path::new(""));
-                let thumb_path = parent.join(".thumbnails").join(format!("{}.jpg", filename));
-                thumb_path.to_string_lossy().to_string()
+            let thumb_rel_path = image
+                .parent()
+                .unwrap_or(Path::new(""))
+                .join(".thumbnails")
+                .join(format!("{}.jpg", filename));
+            let display_src = if is_vid || current_dir.join(&thumb_rel_path).exists() {
+                thumb_rel_path.to_string_lossy().to_string()
             } else {
                 path_str.to_string()
             };
 
+            // Check for web-compatible video proxy
+            let mut src_url = path_str.to_string();
+            if is_vid {
+                let proxy_path = image
+                    .parent()
+                    .unwrap_or(Path::new(""))
+                    .join(".thumbnails")
+                    .join(format!("{}.mp4", filename));
+                if current_dir.join(&proxy_path).exists() {
+                    src_url = proxy_path.to_string_lossy().to_string();
+                }
+            }
+
             html.push_str(&generate_photo_html(
-                &path_str,
+                &src_url,
                 &display_src,
                 &filename,
                 &date_str,
@@ -126,7 +145,7 @@ pub fn build_html(
 
     // Directories
     if !subdirs.is_empty() {
-        html.push_str("    <h2>Directories</h2>\n");
+        html.push_str("    <div class=\"section-title\">Directories</div>\n");
         html.push_str(
             r#"    <div class="directories">
 "#,
@@ -146,7 +165,7 @@ pub fn build_html(
 
     // Photos (Direct)
     if !images.is_empty() {
-        html.push_str("    <h2>Photos</h2>\n");
+        html.push_str("    <div class=\"section-title\">Photos</div>\n");
         html.push_str(
             r#"    <div class="gallery">
 "#,
@@ -156,6 +175,7 @@ pub fn build_html(
     }
 
     html.push_str("    </div>\n"); // End directory-view
+    html.push_str("    </div>\n"); // End main-content
 
     // Inject Modal HTML
     html.push_str(include_str!("templates/modal.html"));
@@ -180,7 +200,7 @@ fn generate_photo_html(
     let tmpl = include_str!("templates/photo_card.html");
     let type_str = if is_video { "video" } else { "image" };
     let play_icon = if is_video {
-        "<div class=\"play-icon\">▶</div>"
+        "<div class=\"play-icon\"><span>▶</span></div>"
     } else {
         ""
     };
@@ -201,15 +221,24 @@ fn generate_images_html(images: &[PathBuf], current_dir: &Path, root_path: &Path
         let date_str = get_date_from_path(&full_path, root_path).unwrap_or_default();
         let is_vid = is_video(&full_path);
 
-        let display_src = if is_vid {
-            let thumb_path = Path::new(".thumbnails").join(format!("{}.jpg", filename));
+        let thumb_path = Path::new(".thumbnails").join(format!("{}.jpg", filename));
+        let display_src = if thumb_path.exists() || is_vid {
             thumb_path.to_string_lossy().to_string()
         } else {
             filename.to_string()
         };
 
+        // Check for web-compatible video proxy
+        let mut src_url = filename.to_string();
+        if is_vid {
+            let proxy_path = Path::new(".thumbnails").join(format!("{}.mp4", filename));
+            if current_dir.join(&proxy_path).exists() {
+                src_url = proxy_path.to_string_lossy().to_string();
+            }
+        }
+
         html.push_str(&generate_photo_html(
-            &filename,
+            &src_url,
             &display_src,
             &filename,
             &date_str,
@@ -268,7 +297,7 @@ mod tests {
 
         let html = build_html(&current, root, &subdirs, &images, &flattened).unwrap();
 
-        assert!(html.contains("<title>2023/01</title>"));
+        assert!(html.contains("<title>2023/01 - Photo Organizer</title>"));
         assert!(html.contains("id=\"toggle-btn\"")); // Toggle present
         assert!(html.contains("id=\"directory-view\" style=\"display: none;\"")); // Hidden dir view
         assert!(html.contains("id=\"flattened-gallery\""));

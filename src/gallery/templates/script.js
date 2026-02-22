@@ -28,7 +28,7 @@ var currentContext = [];
             currentContext = Array.from(photos).map(function(p) {
                 var a = p.querySelector('a');
                 var img = p.querySelector('img');
-                var d = p.querySelector('.date');
+                var d = p.querySelector('.info-overlay');
                 return {
                     src: a.getAttribute('href'),
                     displaySrc: img.getAttribute('src'),
@@ -53,7 +53,11 @@ var currentContext = [];
             document.getElementById('modal').style.display = 'none';
             stopSlideshow();
             var vid = document.getElementById('modal-video');
-            if (vid) vid.pause();
+            if (vid) {
+                vid.pause();
+                vid.removeAttribute('src'); // Fully clear source attribute
+                vid.load();
+            }
         }
 
         function updateModalContent() {
@@ -67,24 +71,18 @@ var currentContext = [];
             // Pause video if it was playing
             vid.pause();
 
-            // Logic: In slideshow, always show thumbnail (image).
-            // In manual mode, show video player if it's a video.
-            if (slideshowInterval) {
-                // Slideshow mode: Force thumbnail
+            if (item.type === 'video') {
+                img.style.display = 'none';
+                vid.style.display = 'block';
+                vid.src = item.src;
+                vid.load(); // Force the video to load the new source
+                if (slideshowInterval) {
+                    vid.play(); 
+                }
+            } else {
                 img.style.display = 'block';
                 vid.style.display = 'none';
-                img.src = item.displaySrc; // Use thumbnail
-            } else {
-                if (item.type === 'video') {
-                    img.style.display = 'none';
-                    vid.style.display = 'block';
-                    vid.src = item.src;
-                    // Optional: vid.play(); // Auto-play video on open? Maybe better to let user click play.
-                } else {
-                    img.style.display = 'block';
-                    vid.style.display = 'none';
-                    img.src = item.src; // Full image
-                }
+                img.src = item.src; // Full image
             }
             
             updateButtons();

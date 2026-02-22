@@ -27,19 +27,32 @@ pub fn get_date_from_path(image_path: &Path, root_path: &Path) -> Option<String>
     let relative = image_path.strip_prefix(root_path).ok()?;
     let components: Vec<_> = relative.components().collect();
 
-    // Expect structure: Year/Month/Day/Image.jpg
-    // So we need at least 3 parent directories.
+    // Expect structure: Year/MonthName/Day/Image.jpg
     if components.len() >= 4 {
         let year_str = components[0].as_os_str().to_string_lossy();
-        let month_str = components[1].as_os_str().to_string_lossy();
+        let month_name = components[1].as_os_str().to_string_lossy();
         let day_str = components[2].as_os_str().to_string_lossy();
 
-        // Simple validation: check if they look like numbers
-        if year_str.chars().all(char::is_numeric)
-            && month_str.chars().all(char::is_numeric)
-            && day_str.chars().all(char::is_numeric)
-        {
-            return Some(format!("{}-{}-{}", year_str, month_str, day_str));
+        let month_num = match month_name.as_ref() {
+            "January" => "01",
+            "February" => "02",
+            "March" => "03",
+            "April" => "04",
+            "May" => "05",
+            "June" => "06",
+            "July" => "07",
+            "August" => "08",
+            "September" => "09",
+            "October" => "10",
+            "November" => "11",
+            "December" => "12",
+            _ => return None,
+        };
+
+        // Simple validation: check if year and day look like numbers
+        if year_str.chars().all(char::is_numeric) && day_str.chars().all(char::is_numeric) {
+            let day_val = day_str.parse::<u32>().unwrap_or(0);
+            return Some(format!("{}-{}-{:02}", year_str, month_num, day_val));
         }
     }
     None
@@ -66,33 +79,25 @@ mod tests {
         let root = Path::new("/tmp/output");
 
         // Valid path
-        let path = root.join("2023/05/20/img.jpg");
+        let path = root.join("2023/May/20/img.jpg");
         assert_eq!(
             get_date_from_path(&path, root),
             Some("2023-05-20".to_string())
         );
 
-        // Valid path with deep nesting (still works if structure is preserved at start)
-        let path = root.join("2023/05/20/extra/img.jpg");
+        // Valid path with deep nesting
+        let path = root.join("2023/January/01/extra/img.jpg");
         assert_eq!(
             get_date_from_path(&path, root),
-            Some("2023-05-20".to_string())
+            Some("2023-01-01".to_string())
         );
 
         // Too short
-        let path = root.join("2023/05/img.jpg");
+        let path = root.join("2023/May/img.jpg");
         assert_eq!(get_date_from_path(&path, root), None);
 
-        // Non-numeric
-        let path = root.join("unknown/folder/img.jpg");
-        assert_eq!(get_date_from_path(&path, root), None);
-
-        // Mixed numeric/non-numeric
-        let path = root.join("2023/May/20/img.jpg");
-        assert_eq!(get_date_from_path(&path, root), None);
-
-        // Path not relative to root
-        let path = Path::new("/other/path/2023/05/20/img.jpg");
+        // Numeric month (no longer supported)
+        let path = root.join("2023/05/20/img.jpg");
         assert_eq!(get_date_from_path(&path, root), None);
     }
 }
