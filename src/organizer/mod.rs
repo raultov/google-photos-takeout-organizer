@@ -19,7 +19,7 @@ pub fn organize_files(input_paths: &[&Path], output_path: &Path, unknown_dir: &s
     info!("Sources: {:?}", input_paths);
     info!("Dest:   {:?}", output_path);
     info!("Dir for unknown files: {:?}", unknown_dir);
-    
+
     let mut processed_input_paths: Vec<PathBuf> = Vec::new();
 
     let mut archives = Vec::new();
@@ -68,52 +68,66 @@ pub fn organize_files(input_paths: &[&Path], output_path: &Path, unknown_dir: &s
     let progress_bar = ui::create_progress_bar(total_files);
     progress_bar.set_message("Organizing Photos:");
 
+    use rayon::prelude::*;
+    use std::sync::Mutex;
+
     let date_extractor = DateExtractor::new()?;
-    let mut success_count = 0;
-    let mut error_count = 0;
-    let mut skipped_count = 0;
-    let mut new_files = Vec::new();
+    let success_count = Mutex::new(0);
+    let error_count = Mutex::new(0);
+    let skipped_count = Mutex::new(0);
+    let new_files = Mutex::new(Vec::new());
 
-    for source_path in &processed_input_paths {
-        for entry in WalkDir::new(source_path).into_iter().filter_map(|e| e.ok()) {
-            let path = entry.path();
+    processed_input_paths.par_iter().for_each(|source_path| {
+        WalkDir::new(source_path)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .par_bridge() // Bridge WalkDir (sequential) to parallel iterator
+            .for_each(|entry| {
+                let path = entry.path();
 
-            if !fs_ops::should_process_file(path) {
-                continue;
-            }
+                if !fs_ops::should_process_file(path) {
+                    return;
+                }
 
-            let date = date_extractor.determine_date(path);
+                let date = date_extractor.determine_date(path);
 
-            match fs_ops::process_file(path, output_path, date, unknown_dir) {
-                Ok(action) => match action {
-                    FileAction::New => {
-                        success_count += 1;
-                        if let Some(name) = path.file_name() {
-                            new_files.push(name.to_string_lossy().to_string());
+                match fs_ops::process_file(path, output_path, date, unknown_dir) {
+                    Ok(action) => match action {
+                        FileAction::New => {
+                            if let Ok(mut count) = success_count.lock() {
+                                *count += 1;
+                            }
+                            if let Some(name) = path.file_name()
+                                && let Ok(mut files) = new_files.lock()
+                            {
+                                files.push(name.to_string_lossy().to_string());
+                            }
+                        }
+                        FileAction::Updated => {
+                            if let Ok(mut count) = success_count.lock() {
+                                *count += 1;
+                            }
+                        }
+                        FileAction::Skipped => {
+                            if let Ok(mut count) = skipped_count.lock() {
+                                *count += 1;
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        error!("Failed to process {:?}: {}", path, e);
+                        if let Ok(mut count) = error_count.lock() {
+                            *count += 1;
                         }
                     }
-                    FileAction::Updated => {
-                        success_count += 1;
-                    }
-                    FileAction::Skipped => {
-                        skipped_count += 1;
-                    }
-                },
-                Err(e) => {
-                    error!("Failed to process {:?}: {}", path, e);
-                    error_count += 1;
                 }
-            }
-            progress_bar.inc(1);
-        }
-    }
+                progress_bar.inc(1);
+            });
+    });
+
+    let new_files = new_files.into_inner().unwrap_or_default();
 
     progress_bar.finish_with_message("Done");
-
-    info!(
-        "Done! Processed: {}, Skipped: {}, Errors: {}",
-        success_count, skipped_count, error_count
-    );
 
     if is_incremental_run {
         if !new_files.is_empty() {

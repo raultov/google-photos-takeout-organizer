@@ -2,6 +2,24 @@ var currentContext = [];
         var currentIndex = 0;
         var slideshowInterval = null;
 
+        function filterGallery(type, btn) {
+            // Update active state of buttons
+            document.querySelectorAll('.filter-btn').forEach(function(b) {
+                b.classList.remove('active');
+            });
+            btn.classList.add('active');
+
+            // Filter photos in both galleries
+            document.querySelectorAll('.photo').forEach(function(p) {
+                var pType = p.querySelector('a').getAttribute('data-type');
+                if (type === 'all' || pType === type) {
+                    p.style.display = 'block';
+                } else {
+                    p.style.display = 'none';
+                }
+            });
+        }
+
         function toggleView() {
             var flat = document.getElementById('flattened-gallery');
             var dirs = document.getElementById('directory-view');

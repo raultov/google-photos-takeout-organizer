@@ -28,8 +28,8 @@ mod tests {
 
     #[test]
     fn test_naive_to_utc_invalid() {
-        assert!(naive_to_utc(2023, 02, 30).is_none()); // Feb 30th does not exist
-        assert!(naive_to_utc(2023, 13, 01).is_none()); // Month 13 does not exist
+        assert!(naive_to_utc(2023, 2, 30).is_none()); // Feb 30th does not exist
+        assert!(naive_to_utc(2023, 13, 1).is_none()); // Month 13 does not exist
     }
 
     #[test]

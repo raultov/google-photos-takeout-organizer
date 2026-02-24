@@ -161,7 +161,7 @@ mod tests {
         // Create a 1 second black video using ffmpeg
         // ffmpeg -f lavfi -i color=c=black:s=64x64:d=1 -c:v libx264 -t 1 -y output.mp4
         let status = Command::new("ffmpeg")
-            .args(&[
+            .args([
                 "-f",
                 "lavfi",
                 "-i",

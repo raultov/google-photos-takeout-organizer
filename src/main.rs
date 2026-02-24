@@ -34,6 +34,8 @@ struct Args {
     threads: usize,
 }
 
+// Main entry point for the organizer
+
 fn main() -> Result<()> {
     organizer::ui::init_logger();
 
@@ -42,8 +44,7 @@ fn main() -> Result<()> {
     // Configure Rayon thread pool globally
     rayon::ThreadPoolBuilder::new()
         .num_threads(args.threads)
-        .build_global()
-        .unwrap();
+        .build_global()?;
 
     let output_path = Path::new(&args.output);
 

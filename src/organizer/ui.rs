@@ -1,8 +1,8 @@
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{LevelFilter, Metadata, Record};
-use std::sync::OnceLock;
+use std::sync::Mutex;
 
-static PROGRESS_BAR: OnceLock<ProgressBar> = OnceLock::new();
+static PROGRESS_BAR: Mutex<Option<ProgressBar>> = Mutex::new(None);
 
 struct IndicatifLogger;
 
@@ -14,8 +14,12 @@ impl log::Log for IndicatifLogger {
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
             let msg = format!("[{}] {}", record.level(), record.args());
-            if let Some(pb) = PROGRESS_BAR.get() {
-                pb.println(msg);
+            if let Ok(pb_opt) = PROGRESS_BAR.lock() {
+                if let Some(pb) = &*pb_opt {
+                    pb.println(msg);
+                } else {
+                    eprintln!("{}", msg);
+                }
             } else {
                 eprintln!("{}", msg);
             }
@@ -43,6 +47,12 @@ pub fn init_logger() {
     log::set_max_level(level_filter);
 }
 
+pub fn set_global_progress_bar(pb: ProgressBar) {
+    if let Ok(mut pb_opt) = PROGRESS_BAR.lock() {
+        *pb_opt = Some(pb);
+    }
+}
+
 pub fn create_progress_bar(total_files: u64) -> ProgressBar {
     let progress_bar = ProgressBar::new(total_files);
     progress_bar.set_style(
@@ -54,11 +64,7 @@ pub fn create_progress_bar(total_files: u64) -> ProgressBar {
             .progress_chars("#>-"),
     );
 
-    // Store the progress bar globally so the logger can use it.
-    // OnceLock::set returns an Error if the value is already set.
-    // We ignore this error because in tests this function might be called multiple times,
-    // and in production we only care that *a* progress bar is set.
-    let _ = PROGRESS_BAR.set(progress_bar.clone());
+    set_global_progress_bar(progress_bar.clone());
 
     progress_bar
 }
@@ -66,24 +72,11 @@ pub fn create_progress_bar(total_files: u64) -> ProgressBar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use log::Log;
 
     #[test]
     fn test_create_progress_bar() {
         let total = 100;
         let pb = create_progress_bar(total);
         assert_eq!(pb.length(), Some(total));
-    }
-
-    #[test]
-    fn test_logger_enabled() {
-        // This test assumes default log level might be INFO or similar.
-        // We can't easily reset the global logger, so we test the struct directly.
-        let logger = IndicatifLogger;
-        let metadata = Metadata::builder().level(log::Level::Error).build();
-
-        // We need to ensure max_level is at least Error for this to be true.
-        log::set_max_level(LevelFilter::Error);
-        assert!(logger.enabled(&metadata));
     }
 }

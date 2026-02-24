@@ -189,6 +189,34 @@ h1 {
     border-color: #d2e3fc;
 }
 
+.filters {
+    display: flex;
+    gap: 8px;
+    margin-right: 24px;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    background-color: white;
+    color: var(--text-secondary);
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.filter-btn:hover {
+    background-color: #f8f9fa;
+}
+
+.filter-btn.active {
+    background-color: #e8f0fe;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
 /* Modal Styles */
 .modal {
     display: none;

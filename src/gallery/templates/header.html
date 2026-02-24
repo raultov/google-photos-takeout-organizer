@@ -14,5 +14,12 @@
             <div style="background:var(--primary-color); color:white; width:32px; height:32px; border-radius:4px; display:flex; align-items:center; justify-content:center; margin-right:12px; font-weight:bold;">P</div>
             <h1>{title}</h1>
         </div>
-        {toggle_btn}
+        <div style="display:flex; align-items:center;">
+            <div class="filters">
+                <button class="filter-btn active" onclick="filterGallery('all', this)">All</button>
+                <button class="filter-btn" onclick="filterGallery('image', this)">Photos</button>
+                <button class="filter-btn" onclick="filterGallery('video', this)">Videos</button>
+            </div>
+            {toggle_btn}
+        </div>
     </header>

@@ -56,7 +56,9 @@ pub fn extract_archive(archive_path: &Path, extract_to: &Path) -> Result<()> {
             if (*file.name()).ends_with('/') {
                 fs::create_dir_all(&outpath)?;
             } else {
-                if let Some(p) = outpath.parent() && !p.exists() {
+                if let Some(p) = outpath.parent()
+                    && !p.exists()
+                {
                     fs::create_dir_all(p)?;
                 }
                 let mut outfile = fs::File::create(&outpath)?;
