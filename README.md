@@ -2,7 +2,7 @@
 
 A high-performance Rust tool to organize your Google Photos Takeout archive into a clean, chronological folder structure with a modern, thumbnail-optimized web gallery.
 
-![Version: 0.5.0](https://img.shields.io/badge/version-0.5.0-blue.svg)
+![Version: 0.6.0](https://img.shields.io/badge/version-0.6.0-blue.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Rust](https://img.shields.io/badge/Built%20with-Rust-orange)
 
@@ -13,7 +13,7 @@ A high-performance Rust tool to organize your Google Photos Takeout archive into
 * **Chronological Organization**: Sorts files into a `YYYY/MonthName/DD` folder structure (e.g., `2024/January/15`).
 * **Modern HTML Gallery with Parallel Thumbnails**: Generates a fast, responsive gallery.
     *   **Automatic Thumbnails**: Pre-generates 400x400 previews for images and videos in parallel (using `Total cores - 1` by default).
-    *   **Optional Video Transcoding**: Can detect incompatible video formats (like **HEVC** from Pixel/iPhone) and generate a web-compatible copy (H.264) for the gallery. **Note:** This is a slow, sequential process (one by one) to prevent system instability and memory exhaustion on limited hardware.
+    *   **Smart Parallel Video Transcoding**: Can detect incompatible video formats (like **HEVC** from Pixel/iPhone) and generate a web-compatible copy (H.264) for the gallery. **Note:** This process intelligently scales parallel processing based on available system memory (ensuring at least 70% free memory), preventing system instability and preventing memory exhaustion while maximizing speed on capable hardware.
     *   **Modern Aesthetic**: Clean UI with Google-style typography and smooth transitions.
     *   **High Performance**: Uses **Lazy Loading** to ensure smooth scrolling even with thousands of images.
     *   **Interactive Modal**: View media in a large overlay with keyboard navigation.
@@ -58,11 +58,13 @@ google-photos-takeout-organizer -i takeout-001.zip takeout-002.zip -o ./MyPhotos
 | `--output` | `-o`   | Path to the destination directory | **Required** |
 | `--unknown-dir` | `-u`   | Name of the folder for files with no date | `unknown` |
 | `--generate-html` | `-g`  | Generate HTML gallery | `true` |
-| `--transcode-videos` | `-t` | Transcode HEVC videos to H.264 (Slow, sequential process) | `false` |
+| `--transcode-videos` | `-t` | Transcode HEVC videos to H.264 (Smart parallel process scaling by memory) | `false` |
 | `--threads` | `-j` | Number of parallel thumbnail generation tasks | `Total cores - 1` |
 
 ### ⚠️ Performance & Memory Note
-Video transcoding is a **heavy and slow operation**. To ensure stability on systems with limited resources (like Mini-PCs with 4GB-8GB RAM), videos are transcoded **sequentially (one by one)** and only if requested via the `--transcode-videos` flag. This prevents system crashes and memory saturation. 
+Video transcoding is a **heavy operation**. To ensure stability on systems with limited resources (like Mini-PCs with 4GB-8GB RAM), videos are transcoded using a **smart parallel process** that continuously monitors available memory. 
+
+It implements a **gradual "slow-start" throttle mechanism**, starting with just 1 video and scaling up by 1 concurrent task every 3 seconds, provided the system maintains at least 30% available memory. If memory drops below 20%, it will automatically scale down the number of allowed concurrent jobs. This dynamic scaling prevents sudden out-of-memory crashes while significantly speeding up the process on higher-end hardware (only if requested via the `--transcode-videos` flag).
 
 By default, the tool uses `Total cores - 1` for parallel tasks to keep one core free for your desktop environment, ensuring the system remains responsive during heavy processing.
 
