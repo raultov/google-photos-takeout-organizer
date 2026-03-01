@@ -2,7 +2,7 @@
 
 A high-performance Rust tool to organize your Google Photos Takeout archive into a clean, chronological folder structure with a modern, thumbnail-optimized web gallery.
 
-![Version: 0.6.0](https://img.shields.io/badge/version-0.6.0-blue.svg)
+![Version: 0.6.1](https://img.shields.io/badge/version-0.6.1-blue.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Rust](https://img.shields.io/badge/Built%20with-Rust-orange)
 

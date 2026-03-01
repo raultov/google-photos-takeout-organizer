@@ -156,3 +156,76 @@ fn get_total_files(input_path: &Path) -> u64 {
         .filter(|e| fs_ops::should_process_file(e.path()))
         .count() as u64
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_organize_files_basic() -> Result<()> {
+        let temp_dir = tempfile::tempdir()?;
+        let input_dir = temp_dir.path().join("input");
+        let output_dir = temp_dir.path().join("output");
+        fs::create_dir_all(&input_dir)?;
+
+        // Create a dummy image file with an explicit modified time to force standard date extraction
+        let dummy_file = input_dir.join("image.jpg");
+        fs::write(&dummy_file, b"dummy data")?;
+
+        let input_paths = vec![input_dir.as_path()];
+
+        // Execute organization
+        organize_files(&input_paths, &output_dir, "unknown")?;
+
+        // Verify output directory was created and contains the copied file.
+        // It might be organized by year/month/day or fall back to "unknown".
+        // Here we just recursively check if the file reached the output tree.
+        let output_files: Vec<_> = WalkDir::new(&output_dir)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file())
+            .map(|e| e.path().file_name().unwrap_or_default().to_os_string())
+            .collect();
+
+        assert_eq!(output_files.len(), 1);
+        assert_eq!(output_files[0], "image.jpg");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_organize_files_incremental_run() -> Result<()> {
+        let temp_dir = tempfile::tempdir()?;
+        let input_dir = temp_dir.path().join("input");
+        let output_dir = temp_dir.path().join("output");
+        fs::create_dir_all(&input_dir)?;
+
+        let dummy_file_1 = input_dir.join("image1.jpg");
+        fs::write(&dummy_file_1, b"dummy data 1")?;
+
+        // First run
+        let input_paths = vec![input_dir.as_path()];
+        organize_files(&input_paths, &output_dir, "unknown")?;
+
+        // Add a second file
+        let dummy_file_2 = input_dir.join("image2.jpg");
+        fs::write(&dummy_file_2, b"dummy data 2")?;
+
+        // Second (incremental) run
+        organize_files(&input_paths, &output_dir, "unknown")?;
+
+        let output_files: Vec<_> = WalkDir::new(&output_dir)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file())
+            .map(|e| e.path().file_name().unwrap_or_default().to_os_string())
+            .collect();
+
+        assert_eq!(output_files.len(), 2);
+        assert!(output_files.iter().any(|n| n == "image1.jpg"));
+        assert!(output_files.iter().any(|n| n == "image2.jpg"));
+
+        Ok(())
+    }
+}

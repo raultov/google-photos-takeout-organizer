@@ -31,13 +31,13 @@ pub fn generate_gallery(root_path: &Path, threads: usize, transcode_videos: bool
     let total_files = media_paths.len();
 
     use indicatif::{MultiProgress, ProgressStyle};
-    let multi = MultiProgress::new();
+    let multi_progress_pb = MultiProgress::new();
 
     let pb_style = ProgressStyle::default_bar()
         .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({msg})")?
         .progress_chars("#>-");
 
-    let pb = multi.add(ProgressBar::new(total_files as u64));
+    let pb = multi_progress_pb.add(ProgressBar::new(total_files as u64));
     pb.set_style(pb_style.clone());
     pb.set_message("Processing Media");
     crate::organizer::ui::set_global_progress_bar(pb.clone());
@@ -45,10 +45,10 @@ pub fn generate_gallery(root_path: &Path, threads: usize, transcode_videos: bool
     let to_transcode = process_thumbnails(media_paths, has_ffmpeg, transcode_videos, &pb);
 
     if transcode_videos {
-        transcode_videos_parallel(to_transcode, &multi, &pb_style);
+        transcode_videos_parallel(to_transcode, &multi_progress_pb, &pb_style);
     }
 
-    generate_html_gallery(root_path, total_files, &multi, pb_style)?;
+    generate_html_gallery(root_path, total_files, &multi_progress_pb, pb_style)?;
 
     Ok(())
 }
@@ -56,7 +56,15 @@ pub fn generate_gallery(root_path: &Path, threads: usize, transcode_videos: bool
 fn collect_media_paths(root_path: &Path) -> Vec<std::path::PathBuf> {
     walkdir::WalkDir::new(root_path)
         .into_iter()
+        .filter_entry(|e| {
+            // Ignore the `.thumbnails` directory itself so we don't recurse into it
+            if e.file_type().is_dir() && e.file_name() == ".thumbnails" {
+                return false;
+            }
+            true
+        })
         .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
         .filter(|e| is_image(e.path()) || is_video(e.path()))
         .map(|e| e.path().to_path_buf())
         .collect()
@@ -92,7 +100,7 @@ fn process_thumbnails(
 
 fn transcode_videos_parallel(
     videos: Vec<std::path::PathBuf>,
-    multi: &indicatif::MultiProgress,
+    multi_progress_pb: &indicatif::MultiProgress,
     pb_style: &indicatif::ProgressStyle,
 ) {
     if videos.is_empty() {
@@ -100,10 +108,10 @@ fn transcode_videos_parallel(
     }
 
     use rayon::prelude::*;
-    let tv_pb = multi.add(ProgressBar::new(videos.len() as u64));
-    tv_pb.set_style(pb_style.clone());
-    tv_pb.set_message("Transcoding Videos (Smart Parallel)");
-    crate::organizer::ui::set_global_progress_bar(tv_pb.clone());
+    let transcoding_videos_pb = multi_progress_pb.add(ProgressBar::new(videos.len() as u64));
+    transcoding_videos_pb.set_style(pb_style.clone());
+    transcoding_videos_pb.set_message("Transcoding Videos (Smart Parallel)");
+    crate::organizer::ui::set_global_progress_bar(transcoding_videos_pb.clone());
 
     // Process in parallel, throttling based on free system memory and time
     let throttle = throttle::Throttle::new(
@@ -117,12 +125,12 @@ fn transcode_videos_parallel(
         let (active, percent_available, limit, fallback) = throttle.wait_for_slot(&mut sys);
 
         if fallback {
-            tv_pb.set_message(format!(
+            transcoding_videos_pb.set_message(format!(
                 "Transcoding Videos (1 active low mem - {}% memory free)",
                 percent_available
             ));
         } else {
-            tv_pb.set_message(format!(
+            transcoding_videos_pb.set_message(format!(
                 "Transcoding Videos ({} active - {}% memory free) [Limit: {}]",
                 active, percent_available, limit
             ));
@@ -140,22 +148,22 @@ fn transcode_videos_parallel(
         let total_mem = sys.total_memory();
         let percent_available = (available_mem as f64 / total_mem as f64 * 100.0) as u64;
 
-        tv_pb.set_message(format!(
+        transcoding_videos_pb.set_message(format!(
             "Transcoding Videos ({} active - {}% memory free) [Limit: {}]",
             active_now, percent_available, current_limit
         ));
-        tv_pb.inc(1);
+        transcoding_videos_pb.inc(1);
     });
-    tv_pb.finish_with_message("Transcoding Done");
+    transcoding_videos_pb.finish_with_message("Transcoding Done");
 }
 
 fn generate_html_gallery(
     root_path: &Path,
     total_files: usize,
-    multi: &indicatif::MultiProgress,
+    multi_progress_pb: &indicatif::MultiProgress,
     pb_style: indicatif::ProgressStyle,
 ) -> Result<()> {
-    let pb_html = multi.add(ProgressBar::new(total_files as u64));
+    let pb_html = multi_progress_pb.add(ProgressBar::new(total_files as u64));
     pb_html.set_style(pb_style);
     pb_html.set_message("Generating HTML");
     crate::organizer::ui::set_global_progress_bar(pb_html.clone());

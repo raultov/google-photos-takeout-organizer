@@ -163,4 +163,65 @@ mod tests {
         assert!(!should_process_file(Path::new("no_extension")));
         assert!(!should_process_file(Path::new(".hidden")));
     }
+
+    #[test]
+    fn test_extract_archive_zip() {
+        use std::io::Write;
+        let temp_dir = tempfile::tempdir().unwrap();
+        let archive_path = temp_dir.path().join("test.zip");
+        let extract_to = temp_dir.path().join("extracted_zip");
+
+        // Create a dummy zip file
+        let file = std::fs::File::create(&archive_path).unwrap();
+        let mut zip = zip::ZipWriter::new(file);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
+        zip.start_file("test.txt", options).unwrap();
+        zip.write_all(b"hello zip world").unwrap();
+        zip.finish().unwrap();
+
+        // Extract it
+        extract_archive(&archive_path, &extract_to).unwrap();
+
+        // Verify
+        let extracted_file = extract_to.join("test.txt");
+        assert!(extracted_file.exists());
+        assert_eq!(
+            std::fs::read_to_string(extracted_file).unwrap(),
+            "hello zip world"
+        );
+    }
+
+    #[test]
+    fn test_extract_archive_tar_gz() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let archive_path = temp_dir.path().join("test.tar.gz");
+        let extract_to = temp_dir.path().join("extracted_tar_gz");
+
+        // Create a dummy tar.gz file
+        let file = std::fs::File::create(&archive_path).unwrap();
+        let enc = flate2::write::GzEncoder::new(file, flate2::Compression::default());
+        let mut tar_builder = tar::Builder::new(enc);
+
+        let mut header = tar::Header::new_gnu();
+        header.set_path("test_tar.txt").unwrap();
+        header.set_size(14);
+        header.set_cksum();
+        tar_builder
+            .append(&header, "hello targz ok".as_bytes())
+            .unwrap();
+        // Fully flush the encoder to disk
+        tar_builder.into_inner().unwrap().finish().unwrap();
+
+        // Extract it
+        extract_archive(&archive_path, &extract_to).unwrap();
+
+        // Verify
+        let extracted_file = extract_to.join("test_tar.txt");
+        assert!(extracted_file.exists());
+        assert_eq!(
+            std::fs::read_to_string(extracted_file).unwrap(),
+            "hello targz ok"
+        );
+    }
 }
